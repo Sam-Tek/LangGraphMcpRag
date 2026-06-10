@@ -1,0 +1,87 @@
+services:
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=False
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/8000"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+  # Init container: pulls the model once, then exits cleanly
+  ollama-init:
+    image: ollama/ollama
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["/bin/sh", "-c", "ollama pull llama3.2:1b && echo 'Model ready'"]
+    restart: "no"
+
+  mcp-server:
+    build: ./mcp_server
+    ports:
+      - "8080:8080"
+    depends_on:
+      chromadb:
+        condition: service_healthy
+    environment:
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8080),3); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  web:
+    build: ./web
+    ports:
+      - "7860:7860"
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - MCP_SERVER_URL=http://mcp-server:8080/sse
+      - OLLAMA_MODEL=llama3.2:1b
+      - PYTHONUNBUFFERED=1
+
+  agent:
+    build: ./agent
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - MCP_SERVER_URL=http://mcp-server:8080/sse
+      - OLLAMA_MODEL=llama3.2:1b
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+
+volumes:
+  chromadb_data:
+  ollama_data:
