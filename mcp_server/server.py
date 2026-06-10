@@ -172,90 +172,9 @@ def _seed_data() -> None:
     if collection.count() > 0:
         print(f"Knowledge base already has {collection.count()} documents — skipping seed.")
         return
-
-    # ── Tech documents (for demo / testing) ───────────────────────────────────
-    documents = [
-        {
-            "content": (
-                "LangGraph is a library for building stateful, multi-actor applications with LLMs. "
-                "It extends LangChain with the ability to coordinate multiple agents or chains across "
-                "multiple steps using a directed cyclic graph. Each node in the graph is a function or "
-                "a runnable, and edges define the control flow between them. LangGraph supports "
-                "persistent memory, human-in-the-loop interactions, and streaming."
-            ),
-            "source": "langgraph_docs",
-        },
-        {
-            "content": (
-                "The Model Context Protocol (MCP) is an open standard created by Anthropic that defines "
-                "how LLM applications can connect to external tools and data sources. MCP uses a "
-                "client-server architecture: the MCP server exposes tools and resources, and the MCP "
-                "client (embedded in the LLM application) calls those tools. Communication happens "
-                "over transports such as stdio or HTTP with SSE."
-            ),
-            "source": "mcp_docs",
-        },
-        {
-            "content": (
-                "Retrieval-Augmented Generation (RAG) is a technique that enhances LLM responses by "
-                "retrieving relevant documents from an external knowledge base at query time. The process "
-                "has two phases: indexing (documents are split, embedded and stored in a vector database) "
-                "and retrieval (at query time, the user question is embedded, nearest-neighbour search "
-                "finds the most relevant chunks, which are injected into the LLM prompt as context)."
-            ),
-            "source": "rag_concepts",
-        },
-        {
-            "content": (
-                "ChromaDB is an open-source vector database designed for AI applications. It stores "
-                "document embeddings and supports fast similarity search. ChromaDB can run embedded "
-                "(in-process) or as a standalone HTTP server. It integrates natively with LangChain "
-                "and supports pluggable embedding functions including sentence-transformers and OpenAI."
-            ),
-            "source": "chromadb_docs",
-        },
-        {
-            "content": (
-                "Docker Compose is a tool for defining and running multi-container Docker applications. "
-                "A 'docker-compose.yml' file describes the services, networks, and volumes. Key commands: "
-                "'docker compose up --build' to start everything, 'docker compose down' to stop, "
-                "'docker compose run <service>' to run a one-off command in a service. "
-                "Services can depend on each other using 'depends_on' with health checks."
-            ),
-            "source": "docker_docs",
-        },
-        {
-            "content": (
-                "FastMCP is a high-level Python framework for building MCP servers. It provides "
-                "decorators (@mcp.tool, @mcp.resource, @mcp.prompt) to expose Python functions as MCP "
-                "tools. FastMCP supports multiple transports: stdio (for local CLI), SSE over HTTP "
-                "(for networked services), and WebSocket. It is built on top of the official MCP Python SDK."
-            ),
-            "source": "fastmcp_docs",
-        },
-        {
-            "content": (
-                "Sentence-transformers is a Python library that produces dense vector embeddings from "
-                "text using pre-trained transformer models. The model 'all-MiniLM-L6-v2' is a popular "
-                "lightweight model (22 M parameters) that maps sentences to a 384-dimensional space and "
-                "runs efficiently on CPU. ChromaDB's DefaultEmbeddingFunction uses this model internally."
-            ),
-            "source": "sentence_transformers_docs",
-        },
-        {
-            "content": (
-                "Claude is Anthropic's family of AI assistants. Claude Opus 4.8 is the most capable "
-                "model and supports adaptive thinking, a 1 M token context window, and tool use. "
-                "Tool use allows Claude to call external functions during a conversation; the model "
-                "returns a tool_use block, the application executes the function, and the result is "
-                "returned to Claude as a tool_result block to continue the response."
-            ),
-            "source": "claude_docs",
-        },
-    ]
-
+    
     # ── Domain documents (anonymised) ─────────────────────────────────────────
-    documents += [
+    documents = [
         {
             "content": (
                 "[ENTREPRISE] est une entreprise de coaching sportif et de team building fondée par [FONDATEUR], "
