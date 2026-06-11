@@ -61,6 +61,8 @@ services:
         condition: service_healthy
       ollama-init:
         condition: service_completed_successfully
+    volumes:
+      - ./shared:/app/shared   # mount shared module so web can import it
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - MCP_SERVER_URL=http://mcp-server:8080/sse
@@ -74,6 +76,8 @@ services:
         condition: service_healthy
       ollama-init:
         condition: service_completed_successfully
+    volumes:
+      - ./shared:/app/shared   # mount shared module so agent can import it
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - MCP_SERVER_URL=http://mcp-server:8080/sse
