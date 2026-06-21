@@ -75,7 +75,8 @@ async def main() -> None:
             print("\nThinking...\n", flush=True)
             try:
                 result = await agent.ainvoke(
-                    {"messages": [HumanMessage(content=question)]}
+                    {"messages": [HumanMessage(content=question)]},
+                    config={"configurable": {"thread_id": "cli"}},
                 )
                 # state["messages"] grows with each step:
                 # [HumanMessage, AIMessage(tool_call), ToolMessage, AIMessage(final)]

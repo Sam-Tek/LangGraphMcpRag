@@ -61,7 +61,7 @@ app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
-async def stream_answer(question: str) -> AsyncIterator[str]:
+async def stream_answer(question: str, session_id: str) -> AsyncIterator[str]:
     """
     Run the agentic loop and yield text chunks as they are generated.
 
@@ -73,12 +73,16 @@ async def stream_answer(question: str) -> AsyncIterator[str]:
         LLMs produce sub-word tokens (e.g. "é", "pre", "u", "ves").
         We accumulate tokens in a buffer and only yield when we reach a space
         or newline, so the browser always receives complete words.
+
+    session_id is used as the LangGraph thread_id so conversation history
+    is preserved across turns for the same browser session.
     """
     tool_called = False  # track whether we already notified the UI about RAG search
     word_buffer = ""     # accumulates sub-word tokens until a word boundary
 
     async for event in _agent.astream_events(
         {"messages": [HumanMessage(content=question)]},
+        config={"configurable": {"thread_id": session_id}},
         version="v2",  # v2 is required for on_chat_model_stream events
     ):
         kind = event["event"]
@@ -112,6 +116,7 @@ async def stream_answer(question: str) -> AsyncIterator[str]:
 
 class QuestionRequest(BaseModel):
     question: str
+    session_id: str = "default"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -128,10 +133,11 @@ async def ask(req: QuestionRequest):
     """
     Streaming endpoint — runs the agent and pushes tokens via SSE.
 
+    session_id keeps conversation history separate per browser session.
     The [DONE] sentinel tells the browser the response is complete.
     """
     async def generator():
-        async for token in stream_answer(req.question):
+        async for token in stream_answer(req.question, req.session_id):
             yield {"data": token}
         yield {"data": "[DONE]"}
 

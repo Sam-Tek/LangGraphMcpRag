@@ -150,9 +150,10 @@
 </div>
 
 <script>
-  const chat   = document.getElementById('chat');
-  const input  = document.getElementById('input');
-  const button = document.getElementById('send');
+  const chat      = document.getElementById('chat');
+  const input     = document.getElementById('input');
+  const button    = document.getElementById('send');
+  const sessionId = crypto.randomUUID();  // unique per browser tab / page load
 
   function addMessage(role, text) {
     const wrap = document.createElement('div');
@@ -191,7 +192,7 @@
       const res = await fetch('/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, session_id: sessionId }),
       });
 
       const reader = res.body.getReader();
