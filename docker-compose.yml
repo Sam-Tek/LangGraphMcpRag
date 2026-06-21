@@ -59,14 +59,12 @@ services:
     depends_on:
       mcp-server:
         condition: service_healthy
-      ollama-init:
-        condition: service_completed_successfully
     volumes:
       - ./shared:/app/shared   # mount shared module so web can import it
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
       - MCP_SERVER_URL=http://mcp-server:8080/sse
-      - OLLAMA_MODEL=llama3.2:1b
+      - HF_TOKEN=${HF_TOKEN}
+      - HF_MODEL_ID=${HF_MODEL_ID:-Qwen/Qwen2.5-7B-Instruct}
       - PYTHONUNBUFFERED=1
 
   agent:
@@ -74,14 +72,12 @@ services:
     depends_on:
       mcp-server:
         condition: service_healthy
-      ollama-init:
-        condition: service_completed_successfully
     volumes:
       - ./shared:/app/shared   # mount shared module so agent can import it
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
       - MCP_SERVER_URL=http://mcp-server:8080/sse
-      - OLLAMA_MODEL=llama3.2:1b
+      - HF_TOKEN=${HF_TOKEN}
+      - HF_MODEL_ID=${HF_MODEL_ID:-Qwen/Qwen2.5-7B-Instruct}
       - PYTHONUNBUFFERED=1
     stdin_open: true
     tty: true

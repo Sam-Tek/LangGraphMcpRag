@@ -1,6 +1,7 @@
 fastapi>=0.115.0
 uvicorn>=0.34.0
-langchain-ollama>=0.3.0
+langchain-huggingface>=0.1.0
+huggingface_hub>=0.24.0
 mcp>=1.8.0
 langgraph>=0.3.0
 langchain-mcp-adapters>=0.1.0

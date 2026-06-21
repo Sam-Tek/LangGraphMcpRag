@@ -13,22 +13,52 @@ Streaming strategy:
 """
 
 import sys
+from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from langchain_core.messages import AIMessageChunk, HumanMessage
-from langchain_ollama import ChatOllama
+from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-# Shared module — contains build_graph, get_mcp_tools, config constants
-sys.path.insert(0, "/app/shared")
-from agent import OLLAMA_BASE_URL, MODEL_NAME, build_graph, get_mcp_tools
+# En Docker, __file__ est /app/app.py donc shared est /app/shared (parent/shared).
+# En local, web/app.py donc shared est ../../shared (parent.parent/shared).
+_shared = Path(__file__).resolve().parent / "shared"
+if not _shared.exists():
+    _shared = _shared.parent.parent / "shared"
+sys.path.insert(0, str(_shared))
+from agent import HF_TOKEN, HF_MODEL_ID, managed_agent
 
-app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
+STATIC_DIR = Path(__file__).parent / "static"
+
+# Agent partagé entre toutes les requêtes, initialisé au démarrage de l'app
+_agent = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialise le modèle HuggingFace et l'agent une seule fois; ferme la connexion MCP à l'arrêt."""
+    global _agent
+    endpoint = HuggingFaceEndpoint(
+        repo_id=HF_MODEL_ID,
+        task="text-generation",
+        huggingfacehub_api_token=HF_TOKEN,
+        max_new_tokens=1024,
+        temperature=0.1,
+    )
+    model = ChatHuggingFace(llm=endpoint)
+    async with managed_agent(model) as agent:
+        _agent = agent
+        yield
+    _agent = None
+
+
+app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 async def stream_answer(question: str) -> AsyncIterator[str]:
@@ -44,15 +74,10 @@ async def stream_answer(question: str) -> AsyncIterator[str]:
         We accumulate tokens in a buffer and only yield when we reach a space
         or newline, so the browser always receives complete words.
     """
-    # streaming=True enables token-by-token generation in Ollama
-    model = ChatOllama(model=MODEL_NAME, base_url=OLLAMA_BASE_URL, streaming=True)
-    tools = await get_mcp_tools()
-    agent = build_graph(model, tools)
-
     tool_called = False  # track whether we already notified the UI about RAG search
     word_buffer = ""     # accumulates sub-word tokens until a word boundary
 
-    async for event in agent.astream_events(
+    async for event in _agent.astream_events(
         {"messages": [HumanMessage(content=question)]},
         version="v2",  # v2 is required for on_chat_model_stream events
     ):
@@ -92,8 +117,10 @@ class QuestionRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 async def index():
     """Serve the chat UI."""
-    with open("static/index.html", encoding="utf-8") as f:
-        return f.read()
+    index_file = STATIC_DIR / "index.html"
+    if not index_file.exists():
+        raise HTTPException(status_code=503, detail="UI not available")
+    return index_file.read_text(encoding="utf-8")
 
 
 @app.post("/ask")
